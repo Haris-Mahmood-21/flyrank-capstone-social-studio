@@ -1,0 +1,43 @@
+"""FastAPI application entry point."""
+
+import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import settings
+from app.core.logging import setup_logging
+
+setup_logging(settings.LOG_LEVEL)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    logger.info("Social Media Studio starting up")
+    yield
+    logger.info("Social Media Studio shutting down")
+
+
+app = FastAPI(
+    title="Social Media Studio",
+    description="Turn a blog post into a scheduled, multi-platform social campaign.",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health", tags=["meta"])
+async def health() -> dict[str, str]:
+    """Liveness probe — returns ok when the app is running."""
+    return {"status": "ok"}

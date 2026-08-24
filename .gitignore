@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+dist/
+build/
+*.egg-info/
+
+# Env secrets
+.env
+
+# Alembic
+alembic/versions/__pycache__/
+
+# mypy
+.mypy_cache/
+
+# pytest
+.pytest_cache/
+htmlcov/
+.coverage
+
+# pre-commit
+.pre-commit-cache/
+
+# OS
+.DS_Store
