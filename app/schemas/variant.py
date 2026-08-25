@@ -1,19 +1,17 @@
-"""Pydantic schemas for variants."""
-
 import uuid
-from datetime import datetime
-from decimal import Decimal
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.variant import VariantStatus
 
+# --- Generation ---
+
 
 class GenerateRequest(BaseModel):
-    """Payload for POST /posts/{id}/variants/generate."""
-
-    # e.g. ["discord", "instagram", "linkedin"]
-    platform_keys: list[str]
+    platform_keys: list[Literal["discord", "instagram", "linkedin"]] = Field(
+        ..., description="List of platform keys to generate variants for."
+    )
 
 
 class VariantResponse(BaseModel):
@@ -24,12 +22,19 @@ class VariantResponse(BaseModel):
     hashtags: list[str]
     status: VariantStatus
     ai_generated: bool
-    ai_cost_usd: Decimal | None
-    created_at: datetime
-    updated_at: datetime
+    ai_cost_usd: float | None = None
+    grounding_flags: dict | None = None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GenerateResponse(BaseModel):
     variants: list[VariantResponse]
+
+
+# --- Editing ---
+
+
+class VariantUpdate(BaseModel):
+    content: str | None = None
+    hashtags: list[str] | None = None

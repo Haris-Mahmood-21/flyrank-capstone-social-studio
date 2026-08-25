@@ -75,7 +75,26 @@ Key gate behaviours demonstrated:
 - `test_hashtags_on_discord_raises` — Discord max_hashtags=0 enforced at validator level.
 
 
-## Phase 3 — Review Workflow 🔜
+## Phase 3 — Review Workflow ✅
+
+**Gate:** Unapproved variant blocked; approved one proceeds.
+
+**Evidence:**
+```
+$ uv run pytest tests/test_variants.py -v
+tests/test_variants.py::test_approve_and_reject_variant PASSED
+tests/test_variants.py::test_edit_variant_content PASSED
+tests/test_variants.py::test_schedule_unapproved_variant_fails PASSED
+tests/test_variants.py::test_schedule_approved_variant_succeeds PASSED
+tests/test_variants.py::test_schedule_slot_unique_constraint PASSED
+
+5 passed in 2.14s
+```
+
+Key gate behaviours demonstrated:
+- `test_schedule_unapproved_variant_fails` — POST `/variants/{id}/schedule` on a `DRAFT` variant correctly returns `400 Bad Request` with detail "Cannot schedule variant with status draft".
+- `test_schedule_approved_variant_succeeds` — Transitioning to `APPROVED` first, then calling POST `/variants/{id}/schedule` returns `201 Created` with a new `ScheduleSlot` in `pending` status.
+- `test_schedule_slot_unique_constraint` — Calling POST `/variants/{id}/schedule` twice correctly returns `409 Conflict` thanks to the idempotency key uniqueness.
 
 ---
 

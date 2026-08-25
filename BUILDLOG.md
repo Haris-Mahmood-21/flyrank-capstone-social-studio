@@ -62,3 +62,21 @@ Chronological notes for each phase.
 - Tests: 8 unit (constraint validator) + 4 auth integration + 4 generation
   integration (mocked Gemini) + 1 health = **17 passed**
 - Gate: `ruff check` clean, `pytest -v` → 17 passed
+
+---
+
+## 2026-08-25 — Phase 3
+
+- Added `VariantUpdate`, `ScheduleCreate`, and `ScheduleSlotResponse` schemas.
+- Implemented `PATCH /variants/{id}` to allow editing of `content` and `hashtags`.
+  It triggers the same constraint validator logic to ensure valid outputs.
+- Implemented `POST /variants/{id}/approve` and `POST /variants/{id}/reject` endpoints
+  to manage status transitions.
+- Implemented `POST /variants/{id}/schedule` to lock in a publishing time, creating a
+  `ScheduleSlot` row.
+- Explicitly enforced the rule: unapproved variants cannot be scheduled (returns 400).
+- Handled SQL `IntegrityError` in the scheduling endpoint to return a clean `409 Conflict`
+  when a duplicate `ScheduleSlot` is created for a variant.
+- Wrote integration tests for all four endpoints, verifying business logic, transition
+  states, and database uniqueness behaviors.
+- Gate: `ruff check` clean, `pytest tests/test_variants.py -v` → 5 passed
