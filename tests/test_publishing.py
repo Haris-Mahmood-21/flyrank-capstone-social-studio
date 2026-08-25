@@ -103,12 +103,24 @@ async def test_concurrency_double_publish_prevented(db_session: AsyncSession) ->
     # Print the error for visual confirmation in test output
     print(f"\nCaught constraint violation successfully: {repr(errors[0].__cause__)}")
 
-    # Verify in DB
-    all_attempts = (await db_session.scalars(select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot.id))).all()
-    assert len(all_attempts) == 1
+    # Verify in DB using a fresh connection — avoids reading from the post-race session's
+    # identity map which may have a cached (stale) view of the attempt count.
+    from sqlalchemy.ext.asyncio import async_sessionmaker as _sm
+    from sqlalchemy.pool import NullPool as _NullPool
 
-    await db_session.refresh(slot)
-    assert slot.status == SlotStatus.DONE
+    from app.core.config import settings as _cfg
+
+    _base, _ = _cfg.DATABASE_URL.rsplit("/", 1)
+    _verify_engine = create_async_engine(f"{_base}/social_studio_test", poolclass=_NullPool)
+    async with _sm(_verify_engine, class_=AsyncSession, expire_on_commit=False)() as _vs:
+        all_attempts = (await _vs.scalars(
+            select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot.id)
+        )).all()
+        assert len(all_attempts) == 1, f"Expected 1 attempt in DB, found {len(all_attempts)}"
+        fresh_slot = await _vs.scalar(select(ScheduleSlot).where(ScheduleSlot.id == slot.id))
+        assert fresh_slot is not None
+        assert fresh_slot.status == SlotStatus.DONE
+    await _verify_engine.dispose()
 
 
 
@@ -149,3 +161,71 @@ async def test_sequential_duplicate_publish_prevented(db_session: AsyncSession) 
             select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot.id)
         )).all()
         assert len(attempts) == 1
+
+
+async def test_adapter_swap_via_config(db_session: AsyncSession) -> None:
+    """
+    GATE: Swapping the adapter for a platform_key is a config change, never a code change.
+
+    We create a slot with platform_key="discord", then temporarily replace
+    ADAPTERS["discord"] with MockInstagramPublisher (simulating a config swap).
+    The same claim_and_publish_slot code path should use the new adapter
+    with zero code changes to business logic.
+    """
+    from datetime import UTC, datetime
+
+    import app.adapters as adapters_module
+    from app.adapters.mock_instagram import MockInstagramPublisher
+    from app.models.post import Post, SourceType
+    from app.models.schedule_slot import ScheduleSlot, SlotStatus
+    from app.models.variant import Variant, VariantStatus
+
+    post = Post(source_type=SourceType.MARKDOWN, raw_content="swap test", title="swap")
+    db_session.add(post)
+    await db_session.commit()
+    await db_session.refresh(post)
+
+    variant = Variant(
+        post_id=post.id,
+        platform_key="discord",
+        content="adapter swap test content",
+        hashtags=[],
+        status=VariantStatus.APPROVED,
+        ai_generated=False,
+    )
+    db_session.add(variant)
+    await db_session.commit()
+    await db_session.refresh(variant)
+
+    discord_slot = ScheduleSlot(
+        variant_id=variant.id,
+        scheduled_for=datetime.now(UTC),
+        idempotency_key=f"swap_test:{variant.id}",
+        status=SlotStatus.PENDING,
+    )
+    db_session.add(discord_slot)
+    await db_session.commit()
+    await db_session.refresh(discord_slot)
+
+    # --- Config swap: replace ADAPTERS["discord"] with MockInstagramPublisher ---
+    original_discord = adapters_module.ADAPTERS["discord"]
+    swapped_registry = dict(adapters_module.ADAPTERS)
+    swapped_registry["discord"] = MockInstagramPublisher()
+    adapters_module.ADAPTERS = swapped_registry  # type: ignore[assignment]
+
+    try:
+        attempt = await claim_and_publish_slot(discord_slot.id, db_session)
+    finally:
+        # Always restore the original adapter
+        original_registry = dict(adapters_module.ADAPTERS)
+        original_registry["discord"] = original_discord
+        adapters_module.ADAPTERS = original_registry  # type: ignore[assignment]
+
+    # The slot published through mock_instagram (the swapped adapter), not discord
+    assert attempt is not None
+    assert attempt.result == "success"
+    assert attempt.adapter_name == "mock_instagram", (
+        f"Expected mock_instagram adapter after swap, got {attempt.adapter_name}"
+    )
+    assert attempt.response_ref is not None
+    assert attempt.response_ref.startswith("ig_mock_")

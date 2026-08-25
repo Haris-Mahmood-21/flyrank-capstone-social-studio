@@ -59,8 +59,7 @@ async def fetch_url_content(url: str) -> str:
     """Fetch a URL and return its content as plain text."""
     logger.info("Fetching URL for ingestion: %s", url)
     async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
-        response = client.get(url)
-        response = await response  # type: ignore[assignment]
+        response = await client.get(url)
         response.raise_for_status()
     content_type = response.headers.get("content-type", "")
     if "html" in content_type:

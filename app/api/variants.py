@@ -14,10 +14,11 @@ from app.core.logging import new_correlation_id
 from app.core.security import get_current_user
 from app.models.constraint_profile import ConstraintProfile
 from app.models.post import Post
+from app.models.publish_attempt import PublishAttempt
 from app.models.schedule_slot import ScheduleSlot, SlotStatus
 from app.models.user import User
 from app.models.variant import Variant, VariantStatus
-from app.schemas.schedule import ScheduleCreate, ScheduleSlotResponse
+from app.schemas.schedule import PublishAttemptResponse, ScheduleCreate, ScheduleSlotResponse
 from app.schemas.variant import GenerateRequest, GenerateResponse, VariantResponse, VariantUpdate
 from app.services.generation import (
     ConstraintViolationError,
@@ -227,3 +228,44 @@ async def schedule_variant(
         ) from exc
 
     return slot
+
+
+@router.get("/schedule", response_model=list[ScheduleSlotResponse])
+async def get_schedule(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list[ScheduleSlot]:
+    """Return all upcoming schedule slots in PENDING status, ordered by scheduled_for."""
+    result = await db.execute(
+        select(ScheduleSlot)
+        .where(ScheduleSlot.status == SlotStatus.PENDING)
+        .order_by(ScheduleSlot.scheduled_for.asc())
+    )
+    return list(result.scalars().all())
+
+
+@router.get("/publish-history", response_model=list[PublishAttemptResponse])
+async def get_publish_history(
+    variant_id: uuid.UUID | None = None,
+    platform: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list[PublishAttempt]:
+    """
+    Return all publish attempts, newest first.
+
+    Optional filters:
+    - variant_id: only attempts for this variant
+    - platform:   only attempts for this platform key (e.g. "discord")
+    """
+    query = (
+        select(PublishAttempt)
+        .join(ScheduleSlot, PublishAttempt.schedule_slot_id == ScheduleSlot.id)
+        .join(Variant, ScheduleSlot.variant_id == Variant.id)
+    )
+    if variant_id is not None:
+        query = query.where(Variant.id == variant_id)
+    if platform is not None:
+        query = query.where(Variant.platform_key == platform)
+    result = await db.execute(query.order_by(PublishAttempt.attempted_at.desc()))
+    return list(result.scalars().all())

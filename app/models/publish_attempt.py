@@ -28,7 +28,11 @@ class PublishAttempt(Base):
     )
     adapter_name: Mapped[str] = mapped_column(String(50), nullable=False)
     attempt_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    # "pending" | "success" | "failure"
+    # Three possible values:
+    #   "pending"  — inserted at claim time; the partial unique index on this value
+    #                is what prevents two workers from claiming the same slot.
+    #   "success"  — adapter confirmed the post went through.
+    #   "failure"  — adapter reported an error or the worker crashed.
     result: Mapped[str] = mapped_column(String(20), nullable=False)
     response_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
     error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -1,14 +1,13 @@
-import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.post import Post, SourceType
-from app.models.variant import Variant, VariantStatus
-from app.models.schedule_slot import ScheduleSlot, SlotStatus
 from app.models.publish_attempt import PublishAttempt
+from app.models.schedule_slot import ScheduleSlot, SlotStatus
+from app.models.variant import Variant, VariantStatus
 from app.services.worker import poll_due_slots, reap_stale_claims
 
 pytestmark = pytest.mark.asyncio
@@ -21,7 +20,7 @@ async def _seed_data(db_session: AsyncSession, scheduled_for_delta_sec: int) -> 
 
     variant = Variant(
         post_id=post.id,
-        platform_key="linkedin", 
+        platform_key="linkedin",
         content="worker test",
         hashtags=[],
         status=VariantStatus.APPROVED,
@@ -33,14 +32,14 @@ async def _seed_data(db_session: AsyncSession, scheduled_for_delta_sec: int) -> 
 
     slot = ScheduleSlot(
         variant_id=variant.id,
-        scheduled_for=datetime.now(timezone.utc) + timedelta(seconds=scheduled_for_delta_sec),
+        scheduled_for=datetime.now(UTC) + timedelta(seconds=scheduled_for_delta_sec),
         idempotency_key=f"worker_test:{variant.id}",
         status=SlotStatus.PENDING,
     )
     db_session.add(slot)
     await db_session.commit()
     await db_session.refresh(slot)
-    
+
     return slot
 
 
@@ -72,11 +71,11 @@ async def test_poll_due_slots_publishes_due_items(db_session: AsyncSession) -> N
 async def test_reap_stale_claims(db_session: AsyncSession) -> None:
     """GATE: Kill worker mid-batch, restart, prove zero duplicates (reaper restores state)."""
     slot = await _seed_data(db_session, -10)
-    
+
     # Simulate a crashed worker: slot is CLAIMED, attempt is PENDING, timestamp is old
     slot.status = SlotStatus.CLAIMED
-    
-    old_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+
+    old_time = datetime.now(UTC) - timedelta(minutes=10)
     stuck_attempt = PublishAttempt(
         schedule_slot_id=slot.id,
         adapter_name="discord",
@@ -86,7 +85,7 @@ async def test_reap_stale_claims(db_session: AsyncSession) -> None:
     db_session.add(stuck_attempt)
     await db_session.commit()
     await db_session.refresh(stuck_attempt)
-    
+
     # Manually backdate the attempted_at (SQLAlchemy doesn't let us easily set server_default locally without this)
     # Wait, we can just execute an update
     from sqlalchemy import update
@@ -104,7 +103,7 @@ async def test_reap_stale_claims(db_session: AsyncSession) -> None:
     # Run the reaper
     reaped = await reap_stale_claims(db_session)
     assert reaped == 1
-    
+
     # Verify post-reap state
     await db_session.refresh(stuck_attempt)
     assert stuck_attempt.result == "failure"
@@ -115,10 +114,10 @@ async def test_reap_stale_claims(db_session: AsyncSession) -> None:
 
     # Now if we poll due slots, it should seamlessly retry and succeed
     await poll_due_slots(db_session)
-    
+
     await db_session.refresh(slot)
     assert slot.status == SlotStatus.DONE
-    
+
     # We should now have TWO attempts (one failed from crash, one success from retry)
     attempts = (await db_session.scalars(
         select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot.id).order_by(PublishAttempt.attempt_number)

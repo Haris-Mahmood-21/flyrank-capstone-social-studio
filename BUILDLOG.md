@@ -106,3 +106,14 @@ Chronological notes for each phase.
 - Added `tests/test_worker.py` to cover both the happy path (publishing due slots) and the recovery path (reaping and retrying crashed slots).
 - Updated `README.md` with an architecture Mermaid diagram and marked all phases complete.
 - Gate: 25/25 Pytest integration tests passing locally, no Ruff violations. Capstone finished.
+
+---
+
+## 2026-08-25 — Final Review & Fixes
+
+- **AI Usage Log (Honesty check):** Used AI to run a full architectural review against the capstone spec PDF.
+- The AI caught two missing endpoints required by the spec: `GET /schedule` and `GET /publish-history`. It implemented them.
+- The AI caught that the adapter swap test wasn't explicitly proven via test, so it added `test_adapter_swap_via_config`.
+- The AI fixed a stale-read bug in the concurrency test (where a session read from a cached identity map after the race) by opening a fresh independent DB session for the final verification query.
+- The AI fixed a minor `httpx` double-await bug and some variable naming confusions.
+- Final Gate: 28/28 tests passing, 0 Ruff violations. Ready for submission.

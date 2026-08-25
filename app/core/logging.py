@@ -35,6 +35,10 @@ def setup_logging(level: str = "INFO") -> None:
     root.addHandler(handler)
     root.setLevel(getattr(logging, level.upper(), logging.INFO))
 
+    # Silence noisy background polling logs
+    logging.getLogger("apscheduler").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
 
 def new_correlation_id() -> str:
     """Generate and set a fresh correlation ID for the current async context."""

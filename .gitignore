@@ -26,3 +26,6 @@ htmlcov/
 
 # OS
 .DS_Store
+
+# Internal planning / agent instructions
+PLANNING.md

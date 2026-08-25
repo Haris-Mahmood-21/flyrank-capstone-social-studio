@@ -7,10 +7,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.scheduler import start_scheduler, stop_scheduler
-
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.core.scheduler import start_scheduler, stop_scheduler
 
 setup_logging(settings.LOG_LEVEL)
 logger = logging.getLogger(__name__)
@@ -21,9 +20,11 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Social Media Studio starting up")
-    start_scheduler()
+    if settings.ENVIRONMENT != "test":
+        start_scheduler()
     yield
-    stop_scheduler()
+    if settings.ENVIRONMENT != "test":
+        stop_scheduler()
     logger.info("Social Media Studio shutting down")
 
 
