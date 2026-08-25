@@ -36,6 +36,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Routers ---
+from app.api import auth, posts, variants  # noqa: E402
+
+app.include_router(auth.router)
+app.include_router(posts.router)
+app.include_router(variants.router)
+
 
 @app.get("/health", tags=["meta"])
 async def health() -> dict[str, str]:

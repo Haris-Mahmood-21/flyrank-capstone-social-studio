@@ -7,11 +7,10 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+# Import Base and all ORM models so Alembic autogenerate can detect them.
+import app.models  # noqa: F401 — registers all models with Base.metadata
 from alembic import context
 from app.core.config import settings
-
-# Import our declarative Base so Alembic can see all models.
-# Models must be imported here before autogenerate can detect them.
 from app.core.database import Base  # noqa: F401
 
 # Alembic Config object provides access to values in alembic.ini

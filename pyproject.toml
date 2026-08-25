@@ -15,6 +15,9 @@ dependencies = [
     "python-dotenv>=1.2.3",
     "httpx>=0.28.1",
     "pydantic-settings>=2.15.0",
+    "email-validator>=2.3.0",
+    "google-genai>=2.19.0",
+    "bcrypt>=4.0,<5.0",
 ]
 
 [project.optional-dependencies]
@@ -32,6 +35,7 @@ dev = [
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
 testpaths = ["tests"]
 
 # ---------------------------------------------------------------------------
@@ -40,13 +44,14 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "A", "N"]
 ignore = ["B008"]  # FastAPI Depends() pattern
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]
+"tests/*" = ["S101", "E501"]
 
 # ---------------------------------------------------------------------------
 # mypy
@@ -56,3 +61,13 @@ python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.4",
+    "types-passlib>=1.7.7.20260211",
+]
