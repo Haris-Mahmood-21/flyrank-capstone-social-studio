@@ -80,3 +80,16 @@ Chronological notes for each phase.
 - Wrote integration tests for all four endpoints, verifying business logic, transition
   states, and database uniqueness behaviors.
 - Gate: `ruff check` clean, `pytest tests/test_variants.py -v` → 5 passed
+
+---
+
+## 2026-08-25 — Phase 4
+
+- Replaced full unique constraint on `publish_attempts` with a **partial unique index** (`uq_active_claim`: `UNIQUE (schedule_slot_id) WHERE result = 'pending'`). This ensures exactly one worker can claim a slot concurrently, while preserving audit history for retries.
+- Refactored `app/services/publisher.py` to use a true DB-level constraint for concurrency protection ("claim-then-call" pattern).
+- Implemented `app/adapters/discord.py` using `httpx` to send real JSON payloads to a configured Discord webhook URL.
+- Implemented `mock_instagram.py` and `mock_linkedin.py` adapters.
+- Registered all adapters in `app/adapters/__init__.py`.
+- Wrote `tests/test_publishing.py` with three tests: happy path, concurrent race condition (asserting the `IntegrityError` violation), and sequential duplication (asserting the short-circuit).
+- Wrote `scripts/test_discord.py` to manually provision a full `Post` -> `Variant` -> `ScheduleSlot` and fire the Discord webhook, proving the system works end-to-end.
+- Gate: Discord webhook fired successfully, test suite passing.

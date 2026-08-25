@@ -98,7 +98,30 @@ Key gate behaviours demonstrated:
 
 ---
 
-## Phase 4 — Adapters & Idempotent Publish 🔜
+## Phase 4 — Adapters & Idempotent Publish ✅
+
+**Gate:** Real message lands in Discord; repeated publish call → one message only; concurrency test passes.
+
+**Evidence:**
+```
+# Concurrency & Idempotency Testing
+$ uv run pytest tests/test_publishing.py -v -s
+tests/test_publishing.py::test_publish_adapter_success PASSED
+tests/test_publishing.py::test_concurrency_double_publish_prevented PASSED
+tests/test_publishing.py::test_sequential_duplicate_publish_prevented PASSED
+
+Caught constraint violation successfully: IntegrityError('(sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class \'asyncpg.exceptions.UniqueViolationError\'>: duplicate key value violates unique constraint "uq_active_claim"
+
+# Real Discord Publish Output
+$ uv run python scripts/test_discord.py
+Created slot 065f5ff9-0dba-4666-aeaf-47e9e0c80360, publishing to Discord...
+SUCCESS! Message landed in Discord. Ref ID: 1541861636221173891
+```
+
+Key behaviors demonstrated:
+- A real `DiscordPublisher` sent a variant to the provided webhook URL via `httpx`, recording the `response_ref`.
+- Concurrency race (`test_concurrency_double_publish_prevented`) triggers a real DB-level `IntegrityError` due to the partial unique index `UNIQUE(schedule_slot_id) WHERE result='pending'`.
+- Sequential deduplication (`test_sequential_duplicate_publish_prevented`) intercepts duplicate API calls before touching the adapter.
 
 ---
 
