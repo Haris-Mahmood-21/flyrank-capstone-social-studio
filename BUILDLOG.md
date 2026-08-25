@@ -93,3 +93,16 @@ Chronological notes for each phase.
 - Wrote `tests/test_publishing.py` with three tests: happy path, concurrent race condition (asserting the `IntegrityError` violation), and sequential duplication (asserting the short-circuit).
 - Wrote `scripts/test_discord.py` to manually provision a full `Post` -> `Variant` -> `ScheduleSlot` and fire the Discord webhook, proving the system works end-to-end.
 - Gate: Discord webhook fired successfully, test suite passing.
+  
+---
+
+## 2026-08-25 — Phase 5
+
+- Added `psycopg2-binary` to support APScheduler's `SQLAlchemyJobStore` synchronous requirements.
+- Configured `APScheduler` in `app/core/scheduler.py` to run the worker loop every 10 seconds.
+- Integrated scheduler lifecycle into FastAPI's `lifespan` manager in `app/main.py`.
+- Wrote `app/services/worker.py` containing `poll_due_slots` and `reap_stale_claims`. The reaper cleanly handles worker crashes by detecting mid-batch locks (stuck `pending` attempts) and resetting them to allow auto-retries.
+- Verified structured JSON logging flows properly with `correlation_id` injection during background execution.
+- Added `tests/test_worker.py` to cover both the happy path (publishing due slots) and the recovery path (reaping and retrying crashed slots).
+- Updated `README.md` with an architecture Mermaid diagram and marked all phases complete.
+- Gate: 25/25 Pytest integration tests passing locally, no Ruff violations. Capstone finished.

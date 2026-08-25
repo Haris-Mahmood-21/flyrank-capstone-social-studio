@@ -125,4 +125,35 @@ Key behaviors demonstrated:
 
 ---
 
-## Phase 5 — Scheduling, Hardening, Docs 🔜
+## Phase 5 — Scheduling, Hardening, Docs ✅
+
+**Gate:** Every Definition of Done box ticked, full suite green in CI.
+
+**Evidence:**
+- `apscheduler` implemented using `SQLAlchemyJobStore` (`app/core/scheduler.py`).
+- Automatic background worker loop created in `app/services/worker.py` and linked to FastAPI `lifespan`.
+- Implemented zombie-slot reaper: gracefully handles "kill worker mid-batch, restart" requirement by finding `pending` attempts stuck for 5+ minutes, dropping their partial index lock, and restoring the slot to `PENDING` for a clean retry.
+- All 25/25 Pytest scenarios passing, including `test_poll_due_slots_publishes_due_items` and `test_reap_stale_claims`.
+- Correlation ID natively propagated from web request context into background execution logic, with JSON logging standard.
+- `README.md` updated with an architecture diagram and final project states.
+
+```bash
+$ uv run pytest -v
+======================================= test session starts ========================================
+tests/test_auth.py::test_login_success PASSED
+tests/test_auth.py::test_login_invalid_credentials PASSED
+tests/test_auth.py::test_login_missing_credentials PASSED
+tests/test_generation.py::test_ingest_markdown_and_generate_variants PASSED
+tests/test_generation.py::test_ingest_url_and_generate_variants PASSED
+tests/test_generation.py::test_generate_variants_idempotent PASSED
+...
+tests/test_publishing.py::test_publish_adapter_success PASSED
+tests/test_publishing.py::test_concurrency_double_publish_prevented PASSED
+tests/test_publishing.py::test_sequential_duplicate_publish_prevented PASSED
+tests/test_variants.py::test_edit_variant_content PASSED
+tests/test_worker.py::test_poll_due_slots_publishes_due_items PASSED
+tests/test_worker.py::test_reap_stale_claims PASSED
+=============================== 25 passed, 17 warnings in 8.59s ================================
+```
+
+All 8 testing checklist probes successfully passed. Capstone completed.

@@ -85,6 +85,28 @@ tests/            pytest suite
 
 ---
 
+## Architecture
+
+```mermaid
+graph TD
+    Client[Client Request] --> API[FastAPI Endpoints]
+    API --> Auth[JWT Middleware]
+    API --> Services[Business Logic]
+    
+    sublayer1[Ingestion & Review]
+    sublayer2[Publisher & Adapters]
+    
+    Services --> DB[(PostgreSQL)]
+    
+    Worker[APScheduler Background Worker] -.->|Polls due slots| DB
+    Worker --> Claim[Claim DB Lock]
+    Claim -->|Unique Index Enforced| Adapter[Social Adapters]
+    
+    Adapter --> Discord(Discord Webhook)
+    Adapter --> MockIG(Mock Instagram)
+    Adapter --> MockLI(Mock LinkedIn)
+```
+
 ## Design
 
 See [DESIGN.md](./DESIGN.md) for:
@@ -102,10 +124,10 @@ See [DESIGN.md](./DESIGN.md) for:
 |---|---|---|
 | 0 | Scaffolding | ✅ Done |
 | 1 | Design doc | ✅ Done |
-| 2 | Ingestion & generation | 🔜 |
-| 3 | Review workflow | 🔜 |
-| 4 | Adapters & idempotent publish | 🔜 |
-| 5 | Scheduling, hardening, docs | 🔜 |
+| 2 | Ingestion & generation | ✅ Done |
+| 3 | Review workflow | ✅ Done |
+| 4 | Adapters & idempotent publish | ✅ Done |
+| 5 | Scheduling, hardening, docs | ✅ Done |
 
 ---
 
