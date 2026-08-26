@@ -51,6 +51,9 @@ jobs:
       - name: Ruff lint
         run: uv run ruff check .
 
+      - name: Create test database
+        run: PGPASSWORD=social_studio psql -h localhost -U social_studio -d postgres -c "CREATE DATABASE social_studio_test;"
+
       - name: Ruff format check
         run: uv run ruff format --check .
 

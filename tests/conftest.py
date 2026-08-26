@@ -37,23 +37,45 @@ _DB_CONTAINER = "flyrank-capstone-social-studio-db-1"
 
 
 def _psql(sql: str) -> None:
-    """Run SQL against the test DB via docker exec (synchronous, no asyncpg)."""
-    subprocess.run(
-        [
-            "docker",
-            "exec",
-            _DB_CONTAINER,
-            "psql",
-            "-U",
-            "social_studio",
-            "-d",
-            "social_studio_test",
-            "-c",
-            sql,
-        ],
-        check=True,
-        capture_output=True,
-    )
+    """Run SQL against the test DB via docker exec or local psql (synchronous, no asyncpg)."""
+    import os
+
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        env = os.environ.copy()
+        env["PGPASSWORD"] = "social_studio"
+        subprocess.run(
+            [
+                "psql",
+                "-h",
+                "localhost",
+                "-U",
+                "social_studio",
+                "-d",
+                "social_studio_test",
+                "-c",
+                sql,
+            ],
+            env=env,
+            check=True,
+            capture_output=True,
+        )
+    else:
+        subprocess.run(
+            [
+                "docker",
+                "exec",
+                _DB_CONTAINER,
+                "psql",
+                "-U",
+                "social_studio",
+                "-d",
+                "social_studio_test",
+                "-c",
+                sql,
+            ],
+            check=True,
+            capture_output=True,
+        )
 
 
 # ---------------------------------------------------------------------------
