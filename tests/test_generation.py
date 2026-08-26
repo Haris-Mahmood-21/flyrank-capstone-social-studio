@@ -54,10 +54,15 @@ def _patch_gemini(platform_responses: dict[str, tuple[str, list[str]]]):
     mock_client = MagicMock()
     mock_client.aio.models.generate_content = _generate
 
-    return patch(
-        "app.services.generation.genai.Client",
-        return_value=mock_client,
-    )
+    from contextlib import contextmanager
+
+    @contextmanager
+    def patched():
+        with patch("app.services.generation.genai.Client", return_value=mock_client):
+            with patch("app.services.generation.settings.GEMINI_API_KEY", "dummy-key"):
+                yield
+
+    return patched()
 
 
 # ---------------------------------------------------------------------------
