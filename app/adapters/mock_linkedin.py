@@ -6,6 +6,7 @@ from .base import PublishResult, SocialPublisher
 if TYPE_CHECKING:
     from app.models.variant import Variant
 
+
 class MockLinkedInPublisher(SocialPublisher):
     @property
     def platform_key(self) -> str:

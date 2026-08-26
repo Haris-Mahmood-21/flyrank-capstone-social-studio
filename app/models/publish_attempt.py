@@ -18,7 +18,7 @@ class PublishAttempt(Base):
             "uq_active_claim",
             "schedule_slot_id",
             unique=True,
-            postgresql_where=text("result = 'pending'")
+            postgresql_where=text("result = 'pending'"),
         ),
     )
 

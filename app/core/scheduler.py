@@ -12,11 +12,10 @@ logger = logging.getLogger(__name__)
 # We convert our asyncpg URL to psycopg2.
 sync_db_url = settings.DATABASE_URL.replace("+asyncpg", "")
 
-jobstores = {
-    "default": SQLAlchemyJobStore(url=sync_db_url, tablename="apscheduler_jobs")
-}
+jobstores = {"default": SQLAlchemyJobStore(url=sync_db_url, tablename="apscheduler_jobs")}
 
 scheduler = AsyncIOScheduler(jobstores=jobstores)
+
 
 def start_scheduler():
     """Starts the background scheduler and adds the polling job if not exists."""
@@ -34,6 +33,7 @@ def start_scheduler():
         replace_existing=True,
     )
     logger.info("Registered poll_due_slots_job (interval 10s)")
+
 
 def stop_scheduler():
     if scheduler.running:

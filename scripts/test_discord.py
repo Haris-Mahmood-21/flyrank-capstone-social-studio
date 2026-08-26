@@ -11,9 +11,7 @@ from app.services.publisher import claim_and_publish_slot
 async def main():
     async with AsyncSessionLocal() as db:
         post = Post(
-            source_type=SourceType.MARKDOWN,
-            raw_content="Testing Discord!",
-            title="Test Post"
+            source_type=SourceType.MARKDOWN, raw_content="Testing Discord!", title="Test Post"
         )
         db.add(post)
         await db.commit()
@@ -49,6 +47,7 @@ async def main():
             print(f"SUCCESS! Message landed in Discord. Ref ID: {attempt.response_ref}")
         else:
             print(f"FAILED. Error: {attempt.error_detail if attempt else 'None'}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

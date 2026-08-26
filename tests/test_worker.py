@@ -12,6 +12,7 @@ from app.services.worker import poll_due_slots, reap_stale_claims
 
 pytestmark = pytest.mark.asyncio
 
+
 async def _seed_data(db_session: AsyncSession, scheduled_for_delta_sec: int) -> ScheduleSlot:
     post = Post(source_type=SourceType.MARKDOWN, raw_content="test", title="test")
     db_session.add(post)
@@ -61,9 +62,11 @@ async def test_poll_due_slots_publishes_due_items(db_session: AsyncSession) -> N
     assert slot_future.status == SlotStatus.PENDING
 
     # Verify publish attempt was created for the due slot
-    attempts = (await db_session.scalars(
-        select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot_due.id)
-    )).all()
+    attempts = (
+        await db_session.scalars(
+            select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot_due.id)
+        )
+    ).all()
     assert len(attempts) == 1
     assert attempts[0].result == "success"
 
@@ -89,6 +92,7 @@ async def test_reap_stale_claims(db_session: AsyncSession) -> None:
     # Manually backdate the attempted_at (SQLAlchemy doesn't let us easily set server_default locally without this)
     # Wait, we can just execute an update
     from sqlalchemy import update
+
     await db_session.execute(
         update(PublishAttempt)
         .where(PublishAttempt.id == stuck_attempt.id)
@@ -119,9 +123,13 @@ async def test_reap_stale_claims(db_session: AsyncSession) -> None:
     assert slot.status == SlotStatus.DONE
 
     # We should now have TWO attempts (one failed from crash, one success from retry)
-    attempts = (await db_session.scalars(
-        select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot.id).order_by(PublishAttempt.attempt_number)
-    )).all()
+    attempts = (
+        await db_session.scalars(
+            select(PublishAttempt)
+            .where(PublishAttempt.schedule_slot_id == slot.id)
+            .order_by(PublishAttempt.attempt_number)
+        )
+    ).all()
     assert len(attempts) == 2
     assert attempts[0].result == "failure"
     assert attempts[1].result == "success"

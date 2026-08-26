@@ -15,8 +15,6 @@ setup_logging(settings.LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Social Media Studio starting up")

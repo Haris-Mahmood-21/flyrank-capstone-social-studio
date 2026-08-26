@@ -11,9 +11,12 @@ from app.models.variant import Variant, VariantStatus
 
 logger = logging.getLogger(__name__)
 
+
 class ClaimError(Exception):
     """Raised when a DB constraint prevents claiming the slot."""
+
     pass
+
 
 async def claim_and_publish_slot(
     slot_id: str,

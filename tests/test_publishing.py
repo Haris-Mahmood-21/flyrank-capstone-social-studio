@@ -1,4 +1,3 @@
-
 """Integration tests for Phase 4: Adapters & idempotent publish."""
 
 import asyncio
@@ -16,6 +15,7 @@ from app.models.variant import Variant, VariantStatus
 from app.services.publisher import ClaimError, claim_and_publish_slot
 
 pytestmark = pytest.mark.asyncio
+
 
 async def _seed_data(db_session: AsyncSession) -> ScheduleSlot:
     post = Post(source_type=SourceType.MARKDOWN, raw_content="test", title="test")
@@ -113,15 +113,16 @@ async def test_concurrency_double_publish_prevented(db_session: AsyncSession) ->
     _base, _ = _cfg.DATABASE_URL.rsplit("/", 1)
     _verify_engine = create_async_engine(f"{_base}/social_studio_test", poolclass=_NullPool)
     async with _sm(_verify_engine, class_=AsyncSession, expire_on_commit=False)() as _vs:
-        all_attempts = (await _vs.scalars(
-            select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot.id)
-        )).all()
+        all_attempts = (
+            await _vs.scalars(
+                select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot.id)
+            )
+        ).all()
         assert len(all_attempts) == 1, f"Expected 1 attempt in DB, found {len(all_attempts)}"
         fresh_slot = await _vs.scalar(select(ScheduleSlot).where(ScheduleSlot.id == slot.id))
         assert fresh_slot is not None
         assert fresh_slot.status == SlotStatus.DONE
     await _verify_engine.dispose()
-
 
 
 async def test_sequential_duplicate_publish_prevented(db_session: AsyncSession) -> None:
@@ -133,15 +134,15 @@ async def test_sequential_duplicate_publish_prevented(db_session: AsyncSession) 
     slot = await _seed_data(db_session)
 
     with patch(
-        "app.adapters.mock_instagram.MockInstagramPublisher.publish",
-        new_callable=AsyncMock
+        "app.adapters.mock_instagram.MockInstagramPublisher.publish", new_callable=AsyncMock
     ) as mock_publish:
         from app.adapters.base import PublishResult
+
         mock_publish.return_value = PublishResult(
             success=True,
             adapter_name="mock_instagram",
             response_ref="ig_mock_123",
-            error_detail=None
+            error_detail=None,
         )
 
         # Call 1 (Expected to succeed)
@@ -157,9 +158,11 @@ async def test_sequential_duplicate_publish_prevented(db_session: AsyncSession) 
         assert mock_publish.call_count == 1
 
         # Verify DB only has 1 publish attempt row for this slot
-        attempts = (await db_session.scalars(
-            select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot.id)
-        )).all()
+        attempts = (
+            await db_session.scalars(
+                select(PublishAttempt).where(PublishAttempt.schedule_slot_id == slot.id)
+            )
+        ).all()
         assert len(attempts) == 1
 
 

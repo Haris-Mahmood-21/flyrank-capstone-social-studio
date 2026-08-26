@@ -15,6 +15,7 @@ ADAPTERS: Mapping[str, SocialPublisher] = {
     _LINKEDIN.platform_key: _LINKEDIN,
 }
 
+
 def get_adapter(platform_key: str) -> SocialPublisher:
     """Get the publisher adapter for a given platform key."""
     if platform_key not in ADAPTERS:

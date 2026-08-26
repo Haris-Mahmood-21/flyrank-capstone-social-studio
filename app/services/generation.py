@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Gemini 2.0 Flash pricing (free-tier users pay $0, but we track as if paid)
 _INPUT_COST_PER_TOKEN = Decimal("0.10") / Decimal("1000000")  # $0.10 / 1M tokens
 _OUTPUT_COST_PER_TOKEN = Decimal("0.40") / Decimal("1000000")  # $0.40 / 1M tokens
-_MODEL_NAME = "gemini-2.0-flash"
+_MODEL_NAME = "gemini-3.6-flash"
 
 
 def _build_prompt(post: Post, profile: ConstraintProfile) -> str:
